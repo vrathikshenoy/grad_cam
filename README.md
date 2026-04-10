@@ -1,6 +1,6 @@
-# Grad-CAM: Visual Explanations for Chest X-Ray Pneumonia Detection
+# Brain Tumor Detection with Grad-CAM & Grad-CAM++ Visualization
 
-A deep learning project implementing Gradient-weighted Class Activation Mapping (Grad-CAM) for explainable AI in medical imaging, specifically for pneumonia detection from chest X-rays with synthetic data augmentation.
+A deep learning project implementing Grad-CAM and Grad-CAM++ for explainable AI in medical imaging, specifically for detecting brain tumors and visualizing which regions of medical images the CNN focuses on when making predictions.
 
 ## 📋 Table of Contents
 
@@ -14,129 +14,155 @@ A deep learning project implementing Gradient-weighted Class Activation Mapping 
 - [Usage](#usage)
 - [Results](#results)
 - [Project Structure](#project-structure)
-- [Future Enhancements](#future-enhancements)
 
 ## 🎯 Project Overview
 
-This project addresses the challenge of **interpretable AI in medical imaging** by implementing Grad-CAM to visualize which regions of chest X-ray images influence the model's pneumonia detection decisions. Additionally, it explores the effectiveness of synthetic medical images generated using diffusion models to augment training data.
+This project addresses the challenge of **interpretable AI in medical imaging** by implementing Grad-CAM and Grad-CAM++ to visualize which regions of brain tumor medical images influence the model's classification decisions.
 
 ### Key Objectives:
-1. Train a ResNet18 classifier for pneumonia detection with high accuracy
-2. Generate synthetic pneumonia X-ray images using diffusion models (DDPM)
-3. Implement Grad-CAM to visualize model decision-making process
-4. Evaluate model performance on real vs. synthetic vs. mixed datasets
-5. Provide interpretable explanations for clinical decision support
+1. Train a DenseNet121 classifier for brain tumor detection with high accuracy
+2. Implement Grad-CAM to visualize which image regions the CNN uses for predictions
+3. Implement Grad-CAM++ for improved spatial localization of tumor areas
+4. Generate interpretable heatmaps that highlight regions of interest
+5. Provide visual explanations for clinical decision support
 
 ## ✨ Key Features
 
-- **Grad-CAM Visualization**: Gradient-weighted Class Activation Maps to highlight critical regions
-- **Synthetic Data Generation**: Diffusion-based (DDPM) synthetic X-ray generation
-- **Medical Dataset Integration**: Chest X-ray pneumonia dataset from Kaggle
-- **Transfer Learning**: Pre-trained ResNet18 backbone for efficient training
-- **Comparative Analysis**: Performance metrics across different data compositions
-- **Class Imbalance Handling**: Weighted loss functions for balanced training
-- **Advanced Augmentation**: Multi-level data augmentation strategies
+- **Dual Visualization Methods**: Grad-CAM and Grad-CAM++ for different visualization styles
+- **Pre-trained DenseNet121**: Efficient feature extraction with ImageNet weights
+- **Brain Tumor Dataset**: Real medical imaging data from Kaggle
+- **Transfer Learning**: Leverages pre-trained weights for better convergence
+- **Data Augmentation**: Rotation, shifts, flips, and zoom for robust training
+- **Comprehensive Metrics**: Tracks accuracy, precision, recall alongside training loss
+- **Interactive Visualizations**: Heatmap overlays on original medical images
 
 ## 🔍 Problem Statement
 
-Pneumonia is a serious respiratory infection that requires rapid diagnosis. Chest X-rays are the primary diagnostic tool, but:
-- Manual interpretation is time-consuming and subject to human error
-- Deep learning models achieve high accuracy but lack interpretability
-- Limited medical imaging data restricts model training
+Brain tumors require accurate and rapid diagnosis. However:
+- Manual interpretation by radiologists is time-consuming and subject to inter-observer variability
+- Deep learning models achieve high accuracy but lack interpretability (black-box problem)
+- Clinicians need to understand which regions the model focuses on to trust AI predictions
 
-**Solution**: Create an interpretable AI system that not only classifies X-rays but also explains its predictions through visual activation maps, and augment training data with synthetic images.
+**Solution**: Create an interpretable AI system that classifies brain tumors while visualizing which image regions drive the model's decisions through gradient-based activation mapping.
 
 ## 📊 Methodology
 
-### 1. **Data Generation (Synthetic Images)**
-   - **Architecture**: UNet2D with attention blocks
-   - **Training**: DDPM (Denoising Diffusion Probabilistic Model)
-   - **Parameters**:
-     - Image size: 64×64 (for generation), 224×224 (for classification)
-     - Timesteps: 1000
-     - Epochs: 100
-     - Batch size: 32
+### 1. **Classification Model**
+   - **Base**: DenseNet121 (pre-trained on ImageNet)
+   - **Custom Head**: 
+     - Flatten layer
+     - Dropout (0.7)
+     - BatchNormalization
+     - Dense layer (16 units, ReLU)
+     - Dropout (0.5)
+     - BatchNormalization
+     - Dense layer (2 units, Softmax) → Binary classification output
+   - **Optimizer**: Adam (lr=0.0001)
+   - **Loss**: Binary Crossentropy
+   - **Training epochs**: 25
 
-### 2. **Classification Model**
-   - **Base**: ResNet18 (pre-trained on ImageNet)
-   - **Head**: Custom fully-connected layer with dropout
-   - **Optimizer**: Adam (lr=1e-4, weight_decay=1e-4)
-   - **Loss**: CrossEntropyLoss with class weights
-   - **Training epochs**: 10-25
+### 2. **Grad-CAM Implementation**
+   - Computes gradients of class score w.r.t. feature maps
+   - Weights feature maps by importance (mean gradient magnitude)
+   - Generates heatmap highlighting regions influencing prediction
+   - Resizes heatmap to match input image dimensions (224×224)
 
-### 3. **Grad-CAM Implementation**
-   - Computes gradient of target class w.r.t. activation maps
-   - Generates weighted combination of activation maps
-   - Produces heatmaps highlighting important image regions
-
-### 4. **Experimental Setup**
-   Three experiments were conducted:
-   - **Experiment 1**: Training on real data only
-   - **Experiment 2**: Training on mixed real and synthetic data
-   - **Experiment 3**: Evaluating on various synthetic-to-real ratios
+### 3. **Grad-CAM++ Implementation**
+   - Computes higher-order gradients (first, second, third derivatives)
+   - Applies spatial consistency weighting
+   - Provides better localization for multiple activation regions
+   - More robust to multiple objects/lesions in images
 
 ## 🏗️ Architecture
 
 ### Model Pipeline:
 ```
-Input Image (224×224)
+Input Image (224×224×3)
         ↓
-   ResNet18 (Pre-trained)
+   DenseNet121 (Pre-trained on ImageNet)
         ↓
-   Feature Extraction (512-dim)
+   Flatten Layer
+        ↓
+   Dropout (0.7)
+        ↓
+   BatchNormalization
+        ↓
+   Dense (16 units, ReLU)
         ↓
    Dropout (0.5)
         ↓
-   Linear Layer (512 → 2 classes)
+   BatchNormalization
         ↓
-   Softmax
+   Dense (2 units, Softmax)
         ↓
-Output: [Normal, Pneumonia]
+Output: [No Tumor, Tumor]
 ```
 
 ### Grad-CAM Process:
 ```
-Forward Pass → Activation Maps
+Forward Pass → Convolutional Feature Maps
         ↓
-Backward Pass → Gradients
+Backward Pass → Compute Gradients
         ↓
-Weight Computation (average pooling gradients)
+Weight Computation (mean absolute gradient)
         ↓
-Weighted Combination
+Weighted Feature Combination
         ↓
-ReLU (retain positive activations)
+ReLU (retain positive activations only)
+        ↓
+Normalization & Upsampling to (224×224)
         ↓
 Heatmap Visualization
+```
+
+### Grad-CAM++ Process:
+```
+Forward Pass → Convolutional Feature Maps
+        ↓
+Higher-Order Gradients (1st, 2nd, 3rd order)
+        ↓
+Spatial Consistency Weighting
+        ↓
+Normalized Weighted Feature Combination
+        ↓
+Improved Spatial Localization Heatmap
 ```
 
 ## 📁 Dataset
 
 ### Source:
-- **Kaggle Dataset**: Chest X-Ray Images (Pneumonia)
-- **Dataset Handle**: `paultimothymooney/chest-xray-pneumonia`
+- **Kaggle Dataset**: Brain Tumor Dataset
+- **Dataset Handle**: `preetviradiya/brian-tumor-dataset`
+- **Downloaded via**: Kaggle API (`kagglehub`)
 
 ### Dataset Structure:
 ```
-chest_xray/
-├── train/
-│   ├── NORMAL/     (1,349 images)
-│   └── PNEUMONIA/  (3,875 images)
-└── test/
-    ├── NORMAL/     (234 images)
-    └── PNEUMONIA/  (390 images)
+Brain Tumor Data Set/
+├── Brain Tumor/     (Medical images with brain tumors)
+└── No Brain Tumor/  (Control medical images without tumors)
 ```
 
-### Data Augmentation:
-- **Training**: RandomResizedCrop, HorizontalFlip, Rotation(15°), ColorJitter
-- **Testing**: Resize + CenterCrop
-- **Normalization**: ImageNet standards (mean=[0.485, 0.456, 0.406])
+### Data Properties:
+- **Input Size**: 224×224×3 (RGB images)
+- **Classes**: Binary classification (Tumor vs. No Tumor)
+- **Preprocessing**: Images normalized to [0, 1] range
+- **Resizing**: All images resized to 224×224
+
+### Data Augmentation (Training):
+- **Rescaling**: Normalize pixel values to [0, 1]
+- **Rotation**: Random rotations up to 0.2 radians
+- **Width/Height Shifts**: ±5% random translation
+- **Horizontal & Vertical Flips**: Random mirroring
+- **Zoom**: Random zoom up to 0.2
+- **Validation Split**: 80% train / 20% validation
+- **Batch Size**: 32
 
 ## 🚀 Installation
 
 ### Prerequisites:
-- Python 3.12+
-- GPU (CUDA) recommended for faster training
-- 8GB+ RAM
+- Python 3.8+
+- GPU (CUDA) recommended for faster training (optional)
+- 4GB+ RAM
 
 ### Setup:
 
@@ -146,186 +172,188 @@ chest_xray/
    cd grad_cam
    ```
 
-2. **Create virtual environment**:
+2. **Create virtual environment** (optional):
    ```bash
-   python3.12 -m venv venv
+   python3 -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
 
 3. **Install dependencies**:
    ```bash
-   pip install -r requirements.txt
-   # Or using the project configuration:
-   pip install -e .
+   pip install tensorflow keras numpy pandas opencv-python matplotlib pillow kagglehub scikit-learn
    ```
 
-4. **Install additional requirements**:
-   ```bash
-   pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cu118
-   pip install kagglehub opencv-python matplotlib scikit-learn
-   ```
-
-5. **Setup Kaggle API** (for dataset download):
+4. **Setup Kaggle API** (for automatic dataset download):
    - Create account at [kaggle.com](https://www.kaggle.com)
-   - Download API token from account settings
+   - Download API token from account settings → Create New API Token
    - Place `kaggle.json` in `~/.kaggle/`
+   - Run: `chmod 600 ~/.kaggle/kaggle.json` (Linux/Mac)
 
 ## 💻 Usage
 
-### Running the Main Training Pipeline:
+### Running the Main Notebook:
+
+Open the Jupyter notebook with the dataset and training code:
 
 ```bash
-python medical_synthetic_training.py
+jupyter notebook visual_explanations_gradcam_gradcam.ipynb
 ```
 
-This script:
-1. Downloads the chest X-ray dataset
-2. Generates synthetic pneumonia images using DDPM
-3. Trains ResNet18 on three dataset compositions
-4. Reports accuracy for each experiment
+The notebook will automatically:
+1. Download the Brain Tumor Dataset via Kaggle API
+2. Preprocess and augment the medical images
+3. Train a DenseNet121 model for brain tumor classification
+4. Generate Grad-CAM heatmaps for predictions
+5. Generate Grad-CAM++ heatmaps for improved visualizations
+6. Display side-by-side comparisons of original images with heatmaps
 
-### Using Grad-CAM in Jupyter Notebook:
+### Step-by-Step Workflow:
 
-Open `visual_explanations_gradcam_gradcam.ipynb` for:
-- Interactive Grad-CAM visualization
-- Step-by-step implementation walkthrough
-- Visual comparison of real vs. synthetic predictions
+1. **Data Preparation**: Download and augment brain tumor images
+2. **Model Training**: Train DenseNet121 on augmented dataset for 25 epochs
+3. **Model Evaluation**: Test on validation set, display metrics
+4. **Grad-CAM Visualization**: Generate heatmaps showing regions of interest
+5. **Grad-CAM++ Visualization**: Generate improved heatmaps with better localization
+6. **Comparison Plots**: Display 40 sample images with both visualization methods
 
-### Key Functions:
+### Key Functions Used:
 
 ```python
-# Training with synthetic augmentation
-python medical_synthetic_training.py
+# Load and preprocess images
+readtumorImages(image_paths)  # Reads, normalizes, and resizes images
 
-# Generating synthetic images
-train_diffusion(dataset_root, output_path, device)
+# Generate Grad-CAM heatmap
+gradCam(image, true_label, layer_conv_name)  # Returns heatmap and image
 
-# Evaluating on test set
-train_and_evaluate(experiment_name, train_files, test_files, device)
+# Generate Grad-CAM++ heatmap  
+grad_cam_plus_plus(image, true_label, conv_layer)  # Returns improved heatmap
+
+# Visualize results
+draw_compare(images, gradcam_maps, gradcam_plus_maps, labels)  # Side-by-side display
 ```
 
 ## 📈 Results
 
 ### Expected Performance:
-| Experiment | Data Composition | Accuracy |
-|-----------|------------------|----------|
-| Real Data Only | Original + Original | ~85-90% |
-| Synthetic Augmented | Real + Synthetic | ~82-88% |
-| Balanced Mix | 50% Real + 50% Synthetic | ~86-91% |
+- **Accuracy**: ~85-95% binary classification accuracy
+- **Precision**: High precision for tumor detection (minimizes false positives)
+- **Recall**: Good recall for sensitivity (minimizes false negatives)
+- **Training Time**: ~25 epochs, typically 10-30 minutes (GPU) or 1-2 hours (CPU)
+
+### Model Weights Initialization:
+The model uses pre-trained ImageNet weights for all DenseNet121 layers (not frozen), providing:
+- ✅ Good weight initialization (better than random initialization)
+- ✅ Faster convergence during training
+- ✅ Better feature extraction for medical images
+- ✅ Improved generalization with limited data
 
 ### Grad-CAM Insights:
-- **Normal X-rays**: Activations spread across lungs, highlighting clear regions
-- **Pneumonia X-rays**: Strong activations on affected areas (infiltrates)
-- **Model Focus**: Bottom-right and center regions show strongest activations
+- **Tumor Images**: Strong heat map activations concentrated on tumor regions
+- **No Tumor Images**: Activations distributed across normal brain tissue
+- **Localization**: Heatmaps identify specific areas the CNN uses for decisions
+- **Clinical Relevance**: Visualizations help radiologists understand model predictions
 
-### Benefits of Synthetic Data:
-- ✅ Improves model robustness
-- ✅ Reduces overfitting on limited real data
-- ✅ Helps with class imbalance (4:1 normal-to-pneumonia ratio)
-- ⚠️ Should be used carefully in clinical settings
+### Grad-CAM vs Grad-CAM++:
+- **Grad-CAM**: Faster, general-purpose visualization, works well for single objects
+- **Grad-CAM++**: Better spatial consistency, improved for multiple activation regions, superior localization
+- **Usage**: Both methods complement each other for thorough interpretation
 
 ## 📂 Project Structure
 
 ```
 grad_cam/
 ├── README.md                               # This file
-├── main.py                                 # Entry point
-├── medical_synthetic_training.py           # Main training pipeline
-├── visual_explanations_gradcam_gradcam.ipynb  # Grad-CAM visualization notebook
-├── lung_pneumonia.ipynb                    # Exploratory analysis
-├── pyproject.toml                          # Project configuration
-├── config/
-│   └── global.json                         # Configuration settings
+├── visual_explanations_gradcam_gradcam.ipynb  # Main notebook with complete pipeline
 ├── models/
-│   ├── final_pneumonia_model.h5           # Trained pneumonia classifier
-│   └── final_tumor_model.h5               # Trained tumor classifier
-├── synthetic/
-│   └── PNEUMONIA/                         # Generated synthetic images
-└── .venv/                                  # Virtual environment
+│   ├── final_tumor_model.h5               # Trained DenseNet121 brain tumor model
+│   └── final_pneumonia_model.h5           # Pneumonia model (separate project)
+└── .venv/                                  # Virtual environment (optional)
 ```
 
 ## 🔧 Configuration
 
-Key parameters in `medical_synthetic_training.py`:
+Key parameters in the notebook:
 
 ```python
+INPUT_SHAPE = (224, 224, 3)        # Model input dimensions
 BATCH_SIZE = 32                    # Training batch size
-CLASSIFIER_EPOCHS = 10             # Number of training epochs
-DIFFUSION_EPOCHS = 100             # DDPM training epochs
-IMG_SIZE_DIFFUSION = 64            # Synthetic image generation size
-IMG_SIZE_CLASSIFIER = 224          # Classification model input size
-NUM_SYNTHETIC_SAMPLES = 200        # Number of synthetic images to generate
+TRAINING_EPOCHS = 25               # Number of training epochs
+DROPOUT_RATE_1 = 0.7              # First dropout layer
+DROPOUT_RATE_2 = 0.5              # Second dropout layer
+LEARNING_RATE = 0.0001            # Adam optimizer learning rate
+DENSE_UNITS = 16                  # Hidden dense layer units
 ```
 
-Modify these values to experiment with different configurations.
+Modify these values in the notebook to experiment with different configurations.
 
 ## 🎓 Educational Value
 
 This project demonstrates:
-1. **Transfer Learning**: Using pre-trained models for medical imaging
-2. **Generative Models**: DDPM for synthetic data generation
-3. **Explainable AI**: Grad-CAM for model interpretability
-4. **Data Augmentation**: Synthetic + real data combination
-5. **Class Imbalance Handling**: Weighted loss functions
-6. **Medical AI**: Application in healthcare domain
+1. **Transfer Learning**: Using pre-trained DenseNet121 for medical imaging
+2. **Explainable AI**: Grad-CAM and Grad-CAM++ for model interpretability
+3. **Gradient-based Methods**: Computing gradients w.r.t. activation maps
+4. **Data Augmentation**: Comprehensive augmentation strategies for robust training
+5. **Medical AI**: Application in healthcare domain for brain tumor detection
+6. **Visualization Techniques**: Converting neural network activations into human-interpretable heatmaps
 
 ## 📚 Key Concepts Explained
 
 ### Grad-CAM:
-Grad-CAM (Gradient-weighted Class Activation Mapping) combines class gradients with activation maps to identify important regions:
-- Uses gradients of class scores w.r.t. feature maps
-- Weights indicate importance of each feature
-- Produces interpretable saliency maps
+Gradient-weighted Class Activation Mapping combines class gradients with activation maps:
+- Computes gradients of class score w.r.t. convolutional feature maps
+- Weights feature maps by mean absolute gradient (importance)
+- Uses positive activations (ReLU) to highlight regions
+- Produces saliency heatmaps highlighting important regions
 
-### DDPM:
-Denoising Diffusion Probabilistic Models:
-- Forward process: Gradually add noise to images
-- Reverse process: Learn to denoise step-by-step
-- Generate new images from pure noise
+### Grad-CAM++:
+An improved version of Grad-CAM with better spatial localization:
+- Computes higher-order gradients (1st, 2nd, 3rd derivatives)
+- Applies spatial consistency weighting
+- Better handles multiple activation regions
+- More robust for complex medical images with multiple lesions
 
-### ResNet18:
-- 18-layer residual network with skip connections
+### DenseNet121:
+- Dense Connections: Each layer connects to all previous layers
+- 121 layers total with efficient gradient flow
 - Pre-trained on ImageNet (1.2M images, 1000 classes)
-- Efficient and suitable for transfer learning
+- Excellent for transfer learning with limited medical data
 
 ## 🔮 Future Enhancements
 
-1. **Model Improvements**:
-   - Experiment with ResNet50/101 for higher capacity
-   - Implement ensemble methods
-   - Add attention mechanisms
+1. **Model Architecture**:
+   - Experiment with ResNet50/101 alternatives
+   - Implement ensemble methods combining multiple models
+   - Add attention mechanisms for attention-based explanations
 
-2. **Grad-CAM Extensions**:
+2. **Visualization Extensions**:
    - Guided Grad-CAM for cleaner visualizations
    - Score-CAM for gradient-free explanations
    - Layer-wise Relevance Propagation (LRP)
+   - Integrated Gradients for attribution
 
-3. **Data Augmentation**:
-   - Explore other generative models (VAE, GANs)
-   - Implement CycleGAN for domain adaptation
-   - Create domain-specific synthetic images
-
-4. **Clinical Integration**:
+3. **Clinical Integration**:
    - Web interface for real-time predictions
-   - DICOM file support
-   - Confidence calibration for clinical use
+   - DICOM file support for medical imaging format
+   - Confidence calibration for clinical decision support
+   - Multi-class tumor type classification
 
-5. **Evaluation**:
-   - Cross-validation with k-folds
-   - ROC curves and AUC metrics
-   - Sensitivity/Specificity analysis
-   - Radiologist comparison studies
+4. **Evaluation Metrics**:
+   - 5-fold cross-validation for robust metrics
+   - ROC curves and AUC analysis
+   - Sensitivity/Specificity optimization
+   - Comparison with radiologist interpretations
 
 ## 📖 References
 
 1. **Grad-CAM**: Selvaraju et al., "Grad-CAM: Visual Explanations from Deep Networks via Gradient-based Localization" (ICCV 2017)
-2. **DDPM**: Ho et al., "Denoising Diffusion Probabilistic Models" (NeurIPS 2020)
-3. **ResNet**: He et al., "Deep Residual Learning for Image Recognition" (CVPR 2016)
-4. **Dataset**: Kaggle - Chest X-Ray Images (Pneumonia)
+2. **Grad-CAM++**: Chattopadhyay et al., "Grad-CAM++: Improved Visual Explanations for Deep Convolutional Networks" (WACV 2018)
+3. **DenseNet**: Huang et al., "Densely Connected Convolutional Networks" (CVPR 2017)
+4. **Dataset**: Kaggle - Brain Tumor Dataset by Preet Viradiya
+5. **TensorFlow/Keras Documentation**: https://www.tensorflow.org/
 
 ## ⚠️ Clinical Disclaimer
 
-This project is for **educational purposes only**. The models and visualizations should not be used for clinical diagnosis without proper validation and regulatory approval. Always consult medical professionals for diagnosis.
+This project is for **educational and research purposes only**. The models and visualizations should not be used for clinical diagnosis without proper validation, regulatory approval (FDA, CE marking, etc.), and clinical trials. Always consult qualified medical professionals and radiologists for diagnosis and treatment decisions.
 
 ## 👤 Author
 
@@ -345,5 +373,6 @@ For questions or suggestions, please open an issue in the repository.
 
 ---
 
-**Last Updated**: February 2025
-**Status**: Active Development
+**Project Focus**: Brain Tumor Detection with Visual Explanations  
+**Last Updated**: April 2026  
+**Status**: Complete Implementation
