@@ -162,7 +162,7 @@ Brain Tumor Data Set/
 ### Prerequisites:
 - Python 3.8+
 - GPU (CUDA) recommended for faster training (optional)
-- 4GB+ RAM
+- 6GB+ RAM
 
 ### Setup:
 
@@ -184,10 +184,7 @@ Brain Tumor Data Set/
    ```
 
 4. **Setup Kaggle API** (for automatic dataset download):
-   - Create account at [kaggle.com](https://www.kaggle.com)
-   - Download API token from account settings → Create New API Token
-   - Place `kaggle.json` in `~/.kaggle/`
-   - Run: `chmod 600 ~/.kaggle/kaggle.json` (Linux/Mac)
+   - kagglehub
 
 ## 💻 Usage
 
